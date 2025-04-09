@@ -1,0 +1,30 @@
+Type,Name,Address,Target,Port,String
+INFO,,,,,'zone_transfer=failed; ns_server=172.64.35.210'
+INFO,,,,,'zone_transfer=failed; ns_server=172.64.34.116'
+INFO,,,,,'zone_transfer=failed; ns_server=108.162.194.116'
+INFO,,,,,'zone_transfer=failed; ns_server=108.162.195.210'
+INFO,,,,,'zone_transfer=failed; ns_server=162.159.38.116'
+INFO,,,,,'zone_transfer=failed; ns_server=162.159.44.210'
+SOA,edward.ns.cloudflare.com,162.159.44.210,,,
+SOA,edward.ns.cloudflare.com,172.64.35.210,,,
+SOA,edward.ns.cloudflare.com,108.162.195.210,,,
+NS,treasure.ns.cloudflare.com,162.159.38.116,,,
+NS,treasure.ns.cloudflare.com,172.64.34.116,,,
+NS,treasure.ns.cloudflare.com,108.162.194.116,,,
+NS,edward.ns.cloudflare.com,108.162.195.210,,,
+NS,edward.ns.cloudflare.com,162.159.44.210,,,
+NS,edward.ns.cloudflare.com,172.64.35.210,,,
+MX,alt4.aspmx.l.google.com,64.233.186.26,,,
+MX,alt2.aspmx.l.google.com,108.177.12.26,,,
+MX,aspmx.l.google.com,64.233.185.27,,,
+A,sitca-ve.com,172.64.151.199,,,
+A,sitca-ve.com,104.18.36.57,,,
+TXT,sitca-ve.com,,,,'atlassian-domain-verification=VBQs5ngO/vd4sDNhBV/SVFPB1/zCoQwfOmGYgJa3N4uvVN3tw8U1RPuO1Ky8r7ce'
+TXT,sitca-ve.com,,,,'stripe-verification=212c55a417698e132ffe1228f088eca3073bcb87476d812dd8f35bb54869a610'
+TXT,sitca-ve.com,,,,'v=spf1 include:_spf.atlassian.net ~all'
+TXT,sitca-ve.com,,,,'v=spf1 include:_spf.google.com ~all'
+TXT,_dmarc.sitca-ve.com,,,,'v=DMARC1; p=quarantine; pct=5; rua=mailto:forense@sitca-ve.com'
+SRV,_autodiscover._tcp.sitca-ve.com,52.96.87.232,autodiscover.justhost.com,443,
+SRV,_autodiscover._tcp.sitca-ve.com,52.96.181.104,autodiscover.justhost.com,443,
+SRV,_autodiscover._tcp.sitca-ve.com,52.96.109.200,autodiscover.justhost.com,443,
+SRV,_autodiscover._tcp.sitca-ve.com,52.96.173.136,autodiscover.justhost.com,443,

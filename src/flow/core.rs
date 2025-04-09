@@ -197,9 +197,10 @@ impl Flow {
 
     /// Execute all tasks in the workflow in parallel using tokio
     /// This is the async implementation that does the actual parallel execution
-    async fn execute_parallel_async(&self) -> bool {
+    /// Returns a tuple of (success, task_outputs) where task_outputs is a map of task handles to their outputs
+    async fn execute_parallel_async(&self) -> (bool, HashMap<TaskHandle, (TaskStatus, TaskOutput)>) {
         if self.tasks.is_empty() {
-            return true;
+            return (true, HashMap::new());
         }
 
         // Crear un nuevo HashMap con los mismos valores
@@ -265,11 +266,11 @@ impl Flow {
             if let Ok(success) = result {
                 if !success {
                     // If any task fails, abort
-                    return false;
+                    return (false, HashMap::new());
                 }
             } else {
                 // Task panicked
-                return false;
+                return (false, HashMap::new());
             }
 
             // Find tasks that are now ready to execute
@@ -338,7 +339,16 @@ impl Flow {
         }
 
         // Return the final result
-        all_completed
+        // Extract just the status and output of each task to return
+        let mut task_outputs = HashMap::new();
+        {
+            let tasks_guard = tasks.lock().await;
+            for (handle, node) in tasks_guard.iter() {
+                task_outputs.insert(*handle, (node.status.clone(), node.output.clone()));
+            }
+        }
+        
+        (all_completed, task_outputs)
     }
 
     /// Execute all tasks in the workflow in parallel, respecting dependencies
@@ -348,11 +358,22 @@ impl Flow {
         // Create a new tokio runtime
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
-        let result = runtime.block_on(async {
+        let (result, task_outputs) = runtime.block_on(async {
             // Execute all tasks
-            let success = self.execute_parallel_async().await;
-            success
+            let (success, outputs) = self.execute_parallel_async().await;
+            (success, outputs)
         });
+        
+        // Update the original Flow state with the results from parallel execution
+        if result {
+            for (handle, (status, output)) in task_outputs {
+                if let Some(original_node) = self.tasks.get_mut(&handle) {
+                    // Copy the status and output back to the original task
+                    original_node.status = status;
+                    original_node.output = output;
+                }
+            }
+        }
 
         result
     }
@@ -519,5 +540,323 @@ impl Flow {
     /// Get the output of a task
     pub fn get_output(&self, handle: TaskHandle) -> Option<TaskOutput> {
         self.tasks.get(&handle).map(|task| task.output.clone())
+    }
+    
+    /// Muestra una salida formateada de los resultados de una tarea
+    pub fn pretty(&self, handle: TaskHandle) {
+        if let Some(output) = self.get_output(handle) {
+            match output {
+                TaskOutput::DnsLookup { stdout, stderr, .. } => {
+                    println!("\n=== DNS Lookup Results ===");
+                    if !stdout.is_empty() {
+                        println!("\nStandard Output:\n{}", stdout);
+                    }
+                    if !stderr.is_empty() {
+                        println!("\nStandard Error:\n{}", stderr);
+                    }
+                    println!("\n==========================\n");
+                },
+                TaskOutput::String(s) => {
+                    println!("\n=== Task Output ===");
+                    println!("{}", s);
+                    println!("\n=================\n");
+                },
+                TaskOutput::Bool(b) => {
+                    println!("\n=== Task Result ===");
+                    println!("Success: {}", b);
+                    println!("\n=================\n");
+                },
+                // Implementar otros tipos de salida según sea necesario
+                _ => {
+                    println!("\n=== Task Output ===");
+                    println!("Output type not supported for pretty printing");
+                    println!("\n=================\n");
+                }
+            }
+        } else {
+            println!("No output available for task {}", handle);
+        }
+    }
+
+    /// Export task output to a JSON file
+    pub fn export_json(&self, handle: TaskHandle, dir_path: String, filename: Option<String>) -> bool {
+        use std::fs;
+        use std::path::Path;
+
+        if let Some(output) = self.get_output(handle) {
+            match output {
+                TaskOutput::DnsLookup { json_file, .. } => {
+                    // Para DnsLookup, simplemente copiamos el archivo JSON existente
+                    let target_dir = Path::new(&dir_path);
+                    if !target_dir.exists() {
+                        if let Err(e) = fs::create_dir_all(target_dir) {
+                            println!("Error creating directory: {}", e);
+                            return false;
+                        }
+                    }
+
+                    let source_filename = json_file.file_name().unwrap_or_default();
+                    let target_filename = if let Some(name) = filename {
+                        Path::new(&name).with_extension("json")
+                    } else {
+                        Path::new(source_filename).to_path_buf()
+                    };
+
+                    let target_path = target_dir.join(target_filename);
+
+                    match fs::copy(&json_file, &target_path) {
+                        Ok(_) => {
+                            println!("Exported JSON to {}", target_path.display());
+                            true
+                        }
+                        Err(e) => {
+                            println!("Error exporting JSON: {}", e);
+                            false
+                        }
+                    }
+                }
+                // Implementar otros tipos de salida según sea necesario
+                _ => {
+                    println!("Export JSON not supported for this task type");
+                    false
+                }
+            }
+        } else {
+            println!("No output available for task {}", handle);
+            false
+        }
+    }
+
+    /// Export task output to a CSV file
+    pub fn export_csv(&self, handle: TaskHandle, dir_path: String, filename: Option<String>) -> bool {
+        use std::fs;
+        use std::path::Path;
+
+        if let Some(output) = self.get_output(handle) {
+            match output {
+                TaskOutput::DnsLookup { csv_file, .. } => {
+                    // Para DnsLookup, simplemente copiamos el archivo CSV existente
+                    let target_dir = Path::new(&dir_path);
+                    if !target_dir.exists() {
+                        if let Err(e) = fs::create_dir_all(target_dir) {
+                            println!("Error creating directory: {}", e);
+                            return false;
+                        }
+                    }
+
+                    let source_filename = csv_file.file_name().unwrap_or_default();
+                    let target_filename = if let Some(name) = filename {
+                        Path::new(&name).with_extension("csv")
+                    } else {
+                        Path::new(source_filename).to_path_buf()
+                    };
+
+                    let target_path = target_dir.join(target_filename);
+
+                    match fs::copy(&csv_file, &target_path) {
+                        Ok(_) => {
+                            println!("Exported CSV to {}", target_path.display());
+                            true
+                        }
+                        Err(e) => {
+                            println!("Error exporting CSV: {}", e);
+                            false
+                        }
+                    }
+                }
+                // Implementar otros tipos de salida según sea necesario
+                _ => {
+                    println!("Export CSV not supported for this task type");
+                    false
+                }
+            }
+        } else {
+            println!("No output available for task {}", handle);
+            false
+        }
+    }
+
+    /// Export task output in its raw format
+    pub fn export_raw(&self, handle: TaskHandle, dir_path: String, filename: Option<String>) -> bool {
+        use std::fs;
+        use std::path::Path;
+        use std::io::Write;
+
+        if let Some(output) = self.get_output(handle) {
+            let target_dir = Path::new(&dir_path);
+            if !target_dir.exists() {
+                if let Err(e) = fs::create_dir_all(target_dir) {
+                    println!("Error creating directory: {}", e);
+                    return false;
+                }
+            }
+
+            match output {
+                TaskOutput::DnsLookup { stdout, stderr, json_file, csv_file, exit_code } => {
+                    // Para DnsLookup, exportamos todos los datos disponibles
+                    let base_filename = if let Some(name) = filename {
+                        name
+                    } else {
+                        format!("task_{}", handle)
+                    };
+
+                    // Exportar stdout
+                    let stdout_path = target_dir.join(format!("{}_stdout.txt", base_filename));
+                    if let Err(e) = fs::write(&stdout_path, stdout) {
+                        println!("Error exporting stdout: {}", e);
+                        return false;
+                    }
+
+                    // Exportar stderr
+                    let stderr_path = target_dir.join(format!("{}_stderr.txt", base_filename));
+                    if let Err(e) = fs::write(&stderr_path, stderr) {
+                        println!("Error exporting stderr: {}", e);
+                        return false;
+                    }
+
+                    // Exportar exit_code
+                    let exit_code_path = target_dir.join(format!("{}_exit_code.txt", base_filename));
+                    if let Err(e) = fs::write(&exit_code_path, format!("{}", exit_code)) {
+                        println!("Error exporting exit_code: {}", e);
+                        return false;
+                    }
+
+                    // Copiar archivos JSON y CSV si existen
+                    let json_target = target_dir.join(format!("{}.json", base_filename));
+                    if let Err(e) = fs::copy(&json_file, &json_target) {
+                        println!("Error copying JSON file: {}", e);
+                        // No retornamos false aquí porque queremos continuar con el resto
+                    }
+
+                    let csv_target = target_dir.join(format!("{}.csv", base_filename));
+                    if let Err(e) = fs::copy(&csv_file, &csv_target) {
+                        println!("Error copying CSV file: {}", e);
+                        // No retornamos false aquí porque queremos continuar con el resto
+                    }
+
+                    println!("Exported raw data to {}", target_dir.display());
+                    true
+                },
+                TaskOutput::String(s) => {
+                    let target_filename = if let Some(name) = filename {
+                        format!("{}.txt", name)
+                    } else {
+                        format!("task_{}.txt", handle)
+                    };
+                    
+                    let target_path = target_dir.join(target_filename);
+                    
+                    if let Err(e) = fs::write(&target_path, s) {
+                        println!("Error exporting string: {}", e);
+                        false
+                    } else {
+                        println!("Exported raw string to {}", target_path.display());
+                        true
+                    }
+                },
+                TaskOutput::Json(json) => {
+                    let target_filename = if let Some(name) = filename {
+                        format!("{}.json", name)
+                    } else {
+                        format!("task_{}.json", handle)
+                    };
+                    
+                    let target_path = target_dir.join(target_filename);
+                    
+                    if let Err(e) = fs::write(&target_path, json.to_string()) {
+                        println!("Error exporting JSON: {}", e);
+                        false
+                    } else {
+                        println!("Exported raw JSON to {}", target_path.display());
+                        true
+                    }
+                },
+                TaskOutput::Binary(data) => {
+                    let target_filename = if let Some(name) = filename {
+                        format!("{}.bin", name)
+                    } else {
+                        format!("task_{}.bin", handle)
+                    };
+                    
+                    let target_path = target_dir.join(target_filename);
+                    
+                    if let Err(e) = fs::write(&target_path, data) {
+                        println!("Error exporting binary data: {}", e);
+                        false
+                    } else {
+                        println!("Exported raw binary data to {}", target_path.display());
+                        true
+                    }
+                },
+                TaskOutput::Subfinder(domains) => {
+                    let target_filename = if let Some(name) = filename {
+                        format!("{}.txt", name)
+                    } else {
+                        format!("task_{}_subfinder.txt", handle)
+                    };
+                    
+                    let target_path = target_dir.join(target_filename);
+                    
+                    let mut file = match fs::File::create(&target_path) {
+                        Ok(f) => f,
+                        Err(e) => {
+                            println!("Error creating file: {}", e);
+                            return false;
+                        }
+                    };
+                    
+                    for domain in domains {
+                        if let Err(e) = writeln!(file, "{}", domain) {
+                            println!("Error writing to file: {}", e);
+                            return false;
+                        }
+                    }
+                    
+                    println!("Exported raw Subfinder domains to {}", target_path.display());
+                    true
+                },
+                TaskOutput::Nmap(json) => {
+                    let target_filename = if let Some(name) = filename {
+                        format!("{}.json", name)
+                    } else {
+                        format!("task_{}_nmap.json", handle)
+                    };
+                    
+                    let target_path = target_dir.join(target_filename);
+                    
+                    if let Err(e) = fs::write(&target_path, json.to_string()) {
+                        println!("Error exporting Nmap JSON: {}", e);
+                        false
+                    } else {
+                        println!("Exported raw Nmap data to {}", target_path.display());
+                        true
+                    }
+                },
+                TaskOutput::Bool(b) => {
+                    let target_filename = if let Some(name) = filename {
+                        format!("{}.txt", name)
+                    } else {
+                        format!("task_{}_bool.txt", handle)
+                    };
+                    
+                    let target_path = target_dir.join(target_filename);
+                    
+                    if let Err(e) = fs::write(&target_path, format!("{}", b)) {
+                        println!("Error exporting boolean: {}", e);
+                        false
+                    } else {
+                        println!("Exported raw boolean to {}", target_path.display());
+                        true
+                    }
+                },
+                TaskOutput::None => {
+                    println!("No output to export for task {}", handle);
+                    false
+                }
+            }
+        } else {
+            println!("No output available for task {}", handle);
+            false
+        }
     }
 }

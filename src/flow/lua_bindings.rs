@@ -96,6 +96,42 @@ impl UserData for Flow {
             Ok(handle)
         });
 
+        // Export JSON
+        methods.add_method("export_json", |_, this, params: Table| {
+            let handle: TaskHandle = params.get("handle")?;
+            let dir_path: String = params.get("dir_path")?;
+            let filename: Option<String> = params.get("filename").unwrap_or(None);
+            
+            let success = this.export_json(handle, dir_path, filename);
+            Ok(success)
+        });
+
+        // Export CSV
+        methods.add_method("export_csv", |_, this, params: Table| {
+            let handle: TaskHandle = params.get("handle")?;
+            let dir_path: String = params.get("dir_path")?;
+            let filename: Option<String> = params.get("filename").unwrap_or(None);
+            
+            let success = this.export_csv(handle, dir_path, filename);
+            Ok(success)
+        });
+
+        // Export Raw
+        methods.add_method("export_raw", |_, this, params: Table| {
+            let handle: TaskHandle = params.get("handle")?;
+            let dir_path: String = params.get("dir_path")?;
+            let filename: Option<String> = params.get("filename").unwrap_or(None);
+            
+            let success = this.export_raw(handle, dir_path, filename);
+            Ok(success)
+        });
+
+        // Pretty print task output
+        methods.add_method("pretty", |_, this, handle: TaskHandle| {
+            this.pretty(handle);
+            Ok(())
+        });
+
         // Get task output
         methods.add_method("get_output", |lua, this, handle: TaskHandle| {
             if let Some(output) = this.get_output(handle) {

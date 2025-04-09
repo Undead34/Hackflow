@@ -70,3 +70,17 @@ impl Debug for TaskNode {
             .finish()
     }
 }
+
+// Implementación manual de Clone para TaskNode
+// No podemos usar #[derive(Clone)] porque Box<dyn TaskExecutor> no implementa Clone automáticamente
+impl Clone for TaskNode {
+    fn clone(&self) -> Self {
+        Self {
+            handle: self.handle,
+            executor: self.executor.clone_box(),
+            dependencies: self.dependencies.clone(),
+            status: self.status.clone(),
+            output: self.output.clone(),
+        }
+    }
+}
