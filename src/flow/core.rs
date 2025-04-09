@@ -77,15 +77,22 @@ impl Flow {
             return true;
         }
 
-        // Execute tasks in the order they were added
-        let handles: Vec<TaskHandle> = self.tasks.iter()
-            .filter(|(_, node)| !matches!(node.status, TaskStatus::Completed))
-            .map(|(handle, _)| *handle)
+        // Get the next available handle to determine the number of tasks added so far
+        let max_handle = self.next_handle - 1;
+        
+        // Execute tasks in the order they were added (by handle value)
+        // Handles are assigned sequentially starting from 1
+        let mut handles: Vec<TaskHandle> = (1..=max_handle)
+            .filter(|handle| self.tasks.contains_key(handle) && 
+                   !matches!(self.tasks.get(handle).unwrap().status, TaskStatus::Completed))
             .collect();
         
         if handles.is_empty() {
             return true; // All tasks are already completed
         }
+        
+        // Sort by handle to ensure sequential execution in the order tasks were added
+        handles.sort();
         
         for handle in handles {
             if !self.execute_task(handle) {
@@ -97,86 +104,267 @@ impl Flow {
         self.tasks.values().all(|node| matches!(node.status, TaskStatus::Completed))
     }
 
-    /// Execute all tasks in the workflow in parallel, respecting dependencies
-    /// This method blocks until all tasks are completed
-    pub fn execute_parallel(&mut self) -> bool {
+    /// Execute a single task asynchronously
+    async fn execute_task_async(
+        handle: TaskHandle,
+        tasks: Arc<Mutex<HashMap<TaskHandle, TaskNode>>>,
+        completed: Arc<Mutex<HashSet<TaskHandle>>>,
+    ) -> bool {
+        // Get the task
+        let mut task_node = {
+            let tasks_guard = tasks.lock().await;
+            if let Some(node) = tasks_guard.get(&handle) {
+                node.clone()
+            } else {
+                println!("Task not found: {}", handle);
+                return false;
+            }
+        };
+        
+        // Update status to running
+        task_node.status = TaskStatus::Running;
+        {
+            let mut tasks_guard = tasks.lock().await;
+            tasks_guard.insert(handle, task_node.clone());
+        }
+        
+        // println!("Executing task: {}", task_node.task);
+        
+        // Get input from dependencies if needed
+        let input = {
+            let tasks_guard = tasks.lock().await;
+            Self::get_input_for_task_async(&task_node, &tasks_guard)
+        };
+        
+        // Execute the task based on its type
+        let result = match &task_node.task {
+            Task::RunCommand { command, args, .. } => {
+                // Implementation for running commands
+                println!("Running command: {} {:?}", command, args);
+                // Placeholder for actual command execution
+                // In a real implementation, you would use tokio::process::Command
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await; // Simulate work
+                TaskOutput::String(format!("Output from command: {}", command))
+            },
+            Task::Print { message } => {
+                println!("{}", message);
+                TaskOutput::None
+            },
+            Task::DnsLookup { domain, .. } => {
+                // Placeholder for DNS lookup implementation
+                println!("DNS lookup for: {}", domain);
+                // In a real implementation, you would use tokio::net::lookup_host
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await; // Simulate work
+                TaskOutput::DnsLookup(vec![format!("192.168.1.1 for {}", domain)])
+            },
+            Task::RunNmap { targets, options, .. } => {
+                // Placeholder for Nmap implementation
+                println!("Running Nmap on: {:?} with options: {:?}", targets, options);
+                // In a real implementation, you would use tokio::process::Command
+                tokio::time::sleep(tokio::time::Duration::from_millis(300)).await; // Simulate work
+                TaskOutput::Nmap(serde_json::json!({"hosts": targets}))
+            },
+            Task::RunSubfinder { domain, options, .. } => {
+                // Placeholder for Subfinder implementation
+                println!("Running Subfinder on: {} with options: {:?}", domain, options);
+                // In a real implementation, you would use tokio::process::Command
+                tokio::time::sleep(tokio::time::Duration::from_millis(250)).await; // Simulate work
+                TaskOutput::Subfinder(vec![format!("sub.{}", domain)])
+            },
+            Task::RunWappalyzer { url, .. } => {
+                // Placeholder for Wappalyzer implementation
+                println!("Running Wappalyzer on: {}", url);
+                // In a real implementation, you would use reqwest
+                tokio::time::sleep(tokio::time::Duration::from_millis(150)).await; // Simulate work
+                TaskOutput::Json(serde_json::json!({"technologies": ["Apache", "PHP"]}))
+            },
+        };
+        
+        // Update task with result
+        task_node.status = TaskStatus::Completed;
+        task_node.output = result;
+        
+        {
+            let mut tasks_guard = tasks.lock().await;
+            tasks_guard.insert(handle, task_node);
+        }
+        
+        // Mark as completed
+        {
+            let mut completed_guard = completed.lock().await;
+            completed_guard.insert(handle);
+        }
+        
+        true
+    }
+    
+    /// Get input for a task from its dependencies asynchronously
+    fn get_input_for_task_async(task_node: &TaskNode, tasks: &HashMap<TaskHandle, TaskNode>) -> Option<TaskOutput> {
+        let input_handle = match &task_node.task {
+            Task::RunCommand { input_handle, .. } => input_handle,
+            Task::DnsLookup { input_handle, .. } => input_handle,
+            Task::RunNmap { input_handle, .. } => input_handle,
+            Task::RunSubfinder { input_handle, .. } => input_handle,
+            Task::RunWappalyzer { input_handle, .. } => input_handle,
+            _ => &None,
+        };
+        
+        if let Some(handle) = input_handle {
+            if let Some(input_task) = tasks.get(handle) {
+                return Some(input_task.output.clone());
+            }
+        }
+        
+        None
+    }
+
+    /// Execute all tasks in the workflow in parallel using tokio
+    /// This is the async implementation that does the actual parallel execution
+    async fn execute_parallel_async(&self) -> bool {
         if self.tasks.is_empty() {
             return true;
         }
-
+        
+        // Create shared state for tasks and completed set
+        let tasks = Arc::new(Mutex::new(self.tasks.clone()));
+        let completed = Arc::new(Mutex::new(HashSet::new()));
+        
+        // Add already completed tasks to the completed set
+        {
+            let mut completed_guard = completed.lock().await;
+            for (handle, node) in &self.tasks {
+                if matches!(node.status, TaskStatus::Completed) {
+                    completed_guard.insert(*handle);
+                }
+            }
+        }
+        
+        // Create a semaphore to limit concurrency (adjust the number based on your needs)
+        let semaphore = Arc::new(Semaphore::new(4)); // Allow 4 concurrent tasks
+        
+        // Create a set to track all spawned tasks
+        let mut join_set = JoinSet::new();
+        
         // Find all root nodes (tasks with no dependencies)
-        let mut ready_tasks: VecDeque<TaskHandle> = self.tasks
+        let root_tasks: Vec<TaskHandle> = self.tasks
             .values()
             .filter(|node| node.dependencies.is_empty() && !matches!(node.status, TaskStatus::Completed))
             .map(|node| node.handle)
             .collect();
-
-        // Track completed tasks
-        let mut completed = HashSet::new();
         
-        // Add already completed tasks to the completed set
-        for (handle, node) in &self.tasks {
-            if matches!(node.status, TaskStatus::Completed) {
-                completed.insert(*handle);
-            }
+        // Start with root tasks
+        for handle in root_tasks {
+            let tasks_clone = Arc::clone(&tasks);
+            let completed_clone = Arc::clone(&completed);
+            let semaphore_clone = Arc::clone(&semaphore);
+            
+            join_set.spawn(async move {
+                // Acquire a permit from the semaphore
+                let _permit = semaphore_clone.acquire().await.unwrap();
+                Self::execute_task_async(handle, tasks_clone, completed_clone).await
+            });
         }
         
-        // Process tasks in topological order
-        while !ready_tasks.is_empty() {
-            let handle = ready_tasks.pop_front().unwrap();
-            
-            // Skip if already completed
-            if completed.contains(&handle) {
-                continue;
-            }
-            
-            // Execute the task
-            if !self.execute_task(handle) {
+        // Process remaining tasks as they become ready
+        while let Some(result) = join_set.join_next().await {
+            // Check if the task succeeded
+            if let Ok(success) = result {
+                if !success {
+                    // If any task fails, abort
+                    return false;
+                }
+            } else {
+                // Task panicked
                 return false;
             }
             
-            // Mark as completed
-            completed.insert(handle);
-            
             // Find tasks that are now ready to execute
-            if let Some(&node_idx) = self.node_indices.get(&handle) {
-                // Get all successors (tasks that depend on this one)
-                for successor in self.dag.neighbors_directed(node_idx, Direction::Outgoing) {
-                    let successor_handle = self.dag[successor];
+            let mut ready_tasks = Vec::new();
+            {
+                let completed_guard = completed.lock().await;
+                let tasks_guard = tasks.lock().await;
+                
+                for (handle, node) in tasks_guard.iter() {
+                    // Skip tasks that are already completed or in progress
+                    if completed_guard.contains(handle) || matches!(node.status, TaskStatus::Running) {
+                        continue;
+                    }
                     
                     // Check if all dependencies are satisfied
-                    if let Some(task_node) = self.tasks.get(&successor_handle) {
-                        if !completed.contains(&successor_handle) && 
-                           task_node.dependencies.iter().all(|dep| completed.contains(dep)) {
-                            ready_tasks.push_back(successor_handle);
-                        }
+                    if node.dependencies.iter().all(|dep| completed_guard.contains(dep)) {
+                        ready_tasks.push(*handle);
                     }
                 }
             }
-        }
-
-        // Check if all tasks were executed
-        let all_completed = self.tasks.values().all(|node| 
-            matches!(node.status, TaskStatus::Completed));
             
-        // Reset any tasks that weren't executed (this shouldn't happen with a proper DAG)
+            // Spawn new tasks for those that are ready
+            for handle in ready_tasks {
+                let tasks_clone = Arc::clone(&tasks);
+                let completed_clone = Arc::clone(&completed);
+                let semaphore_clone = Arc::clone(&semaphore);
+                
+                join_set.spawn(async move {
+                    // Acquire a permit from the semaphore
+                    let _permit = semaphore_clone.acquire().await.unwrap();
+                    Self::execute_task_async(handle, tasks_clone, completed_clone).await
+                });
+            }
+        }
+        
+        // Check if all tasks were executed
+        let all_completed = {
+            let tasks_guard = tasks.lock().await;
+            tasks_guard.values().all(|node| matches!(node.status, TaskStatus::Completed))
+        };
+        
+        // Report any tasks that weren't executed
         if !all_completed {
             println!("Warning: Some tasks were not executed. The workflow may have cycles.");
             
-            // Identify tasks that weren't completed
-            let pending_tasks: Vec<TaskHandle> = self.tasks.iter()
+            let tasks_guard = tasks.lock().await;
+            let pending_tasks: Vec<TaskHandle> = tasks_guard.iter()
                 .filter(|(_, node)| !matches!(node.status, TaskStatus::Completed))
                 .map(|(handle, _)| *handle)
                 .collect();
                 
             for handle in pending_tasks {
-                if let Some(task) = self.tasks.get(&handle) {
+                if let Some(task) = tasks_guard.get(&handle) {
                     println!("Pending task: {}", task.task);
                 }
             }
         }
         
+        // Return the final result
         all_completed
+    }
+
+    /// Execute all tasks in the workflow in parallel, respecting dependencies
+    /// This method blocks until all tasks are completed
+    /// This is a synchronous wrapper around the async implementation
+    pub fn execute_parallel(&mut self) -> bool {
+        // Create a new tokio runtime
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        
+        // Execute the async function and get the result
+        let tasks = Arc::new(Mutex::new(self.tasks.clone()));
+        
+        let result = runtime.block_on(async {
+            // Execute all tasks
+            let success = self.execute_parallel_async().await;
+            
+            // If successful, update the tasks in the shared state
+            if success {
+                // Copy the updated tasks back to self.tasks
+                let tasks_guard = tasks.lock().await;
+                for (handle, node) in tasks_guard.iter() {
+                    self.tasks.insert(*handle, node.clone());
+                }
+            }
+            
+            success
+        });
+        
+        result
     }
 
     /// Execute a single task
@@ -186,7 +374,7 @@ impl Flow {
             task_node.status = TaskStatus::Running;
             self.tasks.insert(handle, task_node.clone());
             
-            println!("Executing task: {}", task_node.task);
+            // println!("Executing task: {}", task_node.task);
             
             // Get input from dependencies if needed
             let input = self.get_input_for_task(&task_node);
