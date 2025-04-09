@@ -1,6 +1,8 @@
 mod core;
 mod lua_bindings;
 mod task;
+mod task_executor;
+mod tasks;
 
 use anyhow::{Context, Result};
 use mlua::{Function as LuaFunction, Lua, Table as LuaTable};

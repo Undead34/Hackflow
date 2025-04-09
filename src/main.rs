@@ -9,7 +9,7 @@ fn main() -> anyhow::Result<()> {
         PathBuf::from(&args[1])
     } else {
         // Default test workflow path
-        PathBuf::from("./examples/test_workflow.lua")
+        PathBuf::from("./examples/osint_workflow.lua")
     };
 
     // Create the workflow

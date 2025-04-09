@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.97"
+chrono = "0.4.40"
 clap = "4.5.35"
 mlua = { version = "0.10.3", features = ["anyhow", "lua54", "vendored"] }
 petgraph = "0.6.4"
@@ -14,5 +15,7 @@ sanitise-file-name = "1.0.0"
 scraper = "0.23.1"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
+sugar_path = "1.2.0"
 tokio = { version = "1.44.2", features = ["fs", "macros", "process", "rt", "rt-multi-thread", "sync", "time"] }
 which = "7.0.3"
+wslpath-rs = "0.2.0"
