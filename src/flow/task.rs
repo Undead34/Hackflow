@@ -36,6 +36,7 @@ pub enum TaskOutput {
         csv_file: PathBuf,
         json_file: PathBuf,
         exit_code: i32,
+        domain: String,
         stdout: String,
         stderr: String,
     },

@@ -87,19 +87,53 @@ impl DnsLookupTask {
 
         match output {
             Ok(output) => {
+                let exit_code = output.status.code().unwrap_or(0);
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
                 if output.status.success() {
                     TaskOutput::DnsLookup {
                         csv_file: csv_path,
                         json_file: json_path,
-                        exit_code: output.status.code().unwrap_or(0),
-                        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-                        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                        exit_code,
+                        domain: self.domain.clone(),
+                        stdout,
+                        stderr,
                     }
                 } else {
-                    TaskOutput::None
+                    // Crear un objeto JSON con la información del error
+                    let mut error_info = serde_json::Map::new();
+                    error_info.insert(
+                        "exit_code".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from(exit_code)),
+                    );
+                    error_info.insert("stdout".to_string(), serde_json::Value::String(stdout));
+                    error_info.insert("stderr".to_string(), serde_json::Value::String(stderr));
+                    error_info.insert(
+                        "error".to_string(),
+                        serde_json::Value::String(format!(
+                            "Command failed with exit code {}",
+                            exit_code
+                        )),
+                    );
+
+                    TaskOutput::Json(serde_json::Value::Object(error_info))
                 }
             }
-            Err(_) => TaskOutput::None,
+            Err(e) => {
+                let error_msg = format!("Failed to execute command: {}", e);
+                println!("TaskOutput: {}", error_msg);
+
+                // Crear un objeto JSON con la información del error
+                let mut error_info = serde_json::Map::new();
+                error_info.insert("error".to_string(), serde_json::Value::String(error_msg));
+                error_info.insert(
+                    "exit_code".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from(127)),
+                ); // Código de error estándar para "command not found"
+
+                TaskOutput::Json(serde_json::Value::Object(error_info))
+            }
         }
     }
 

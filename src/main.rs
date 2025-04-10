@@ -8,11 +8,9 @@ fn main() -> anyhow::Result<()> {
     let file_path = if args.len() > 1 {
         PathBuf::from(&args[1])
     } else {
-        // Default test workflow path
         PathBuf::from("./examples/osint_workflow.lua")
     };
 
-    // Create the workflow
     flow::Workflow::new(file_path)?.execute(args)?;
 
     Ok(())

@@ -1,0 +1,373 @@
+[
+    {
+        "arguments": "/usr/bin/dnsrecon -a -t std -d sitca-ve.com -c /mnt/c/Users/maizo/AppData/Local/Temp/sitca-ve-com_dnsrecon_std_20250410_1059.csv -j /mnt/c/Users/maizo/AppData/Local/Temp/sitca-ve-com_dnsrecon_std_20250410_1059.json",
+        "date": "2025-04-10 10:59:19.199516",
+        "type": "ScanInfo"
+    },
+    {
+        "ns_server": "162.159.38.116",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "2a06:98c1:50::ac40:23d2",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "162.159.44.210",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "2803:f800:50::6ca2:c274",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "108.162.194.116",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "172.64.35.210",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "2606:4700:50::a29f:2674",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "108.162.195.210",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "172.64.34.116",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "2803:f800:50::6ca2:c3d2",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "2606:4700:58::a29f:2cd2",
+        "zone_transfer": "failed"
+    },
+    {
+        "ns_server": "2a06:98c1:50::ac40:2274",
+        "zone_transfer": "failed"
+    },
+    {
+        "address": "172.64.35.210",
+        "domain": "sitca-ve.com",
+        "mname": "edward.ns.cloudflare.com",
+        "type": "SOA"
+    },
+    {
+        "address": "162.159.44.210",
+        "domain": "sitca-ve.com",
+        "mname": "edward.ns.cloudflare.com",
+        "type": "SOA"
+    },
+    {
+        "address": "108.162.195.210",
+        "domain": "sitca-ve.com",
+        "mname": "edward.ns.cloudflare.com",
+        "type": "SOA"
+    },
+    {
+        "address": "2a06:98c1:50::ac40:23d2",
+        "domain": "sitca-ve.com",
+        "mname": "edward.ns.cloudflare.com",
+        "type": "SOA"
+    },
+    {
+        "address": "2803:f800:50::6ca2:c3d2",
+        "domain": "sitca-ve.com",
+        "mname": "edward.ns.cloudflare.com",
+        "type": "SOA"
+    },
+    {
+        "address": "2606:4700:58::a29f:2cd2",
+        "domain": "sitca-ve.com",
+        "mname": "edward.ns.cloudflare.com",
+        "type": "SOA"
+    },
+    {
+        "Version": "\"2025.3.3\"",
+        "address": "108.162.195.210",
+        "domain": "sitca-ve.com",
+        "recursive": "True",
+        "target": "edward.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "\"2025.3.3\"",
+        "address": "172.64.35.210",
+        "domain": "sitca-ve.com",
+        "recursive": "True",
+        "target": "edward.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "\"2025.3.3\"",
+        "address": "162.159.44.210",
+        "domain": "sitca-ve.com",
+        "recursive": "True",
+        "target": "edward.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2606:4700:58::a29f:2cd2",
+        "domain": "sitca-ve.com",
+        "recursive": "False",
+        "target": "edward.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2a06:98c1:50::ac40:23d2",
+        "domain": "sitca-ve.com",
+        "recursive": "False",
+        "target": "edward.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2803:f800:50::6ca2:c3d2",
+        "domain": "sitca-ve.com",
+        "recursive": "False",
+        "target": "edward.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "\"2025.3.3\"",
+        "address": "108.162.194.116",
+        "domain": "sitca-ve.com",
+        "recursive": "True",
+        "target": "treasure.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "\"2025.3.3\"",
+        "address": "172.64.34.116",
+        "domain": "sitca-ve.com",
+        "recursive": "True",
+        "target": "treasure.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "\"2025.3.3\"",
+        "address": "162.159.38.116",
+        "domain": "sitca-ve.com",
+        "recursive": "True",
+        "target": "treasure.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2606:4700:50::a29f:2674",
+        "domain": "sitca-ve.com",
+        "recursive": "False",
+        "target": "treasure.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2a06:98c1:50::ac40:2274",
+        "domain": "sitca-ve.com",
+        "recursive": "False",
+        "target": "treasure.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2803:f800:50::6ca2:c274",
+        "domain": "sitca-ve.com",
+        "recursive": "False",
+        "target": "treasure.ns.cloudflare.com",
+        "type": "NS"
+    },
+    {
+        "address": "108.177.12.26",
+        "domain": "sitca-ve.com",
+        "exchange": "aspmx.l.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "142.250.27.26",
+        "domain": "sitca-ve.com",
+        "exchange": "alt4.aspmx.l.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "209.85.202.26",
+        "domain": "sitca-ve.com",
+        "exchange": "alt2.aspmx.l.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "2607:f8b0:400c:c05::1b",
+        "domain": "sitca-ve.com",
+        "exchange": "aspmx.l.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "2a00:1450:4025:401::1b",
+        "domain": "sitca-ve.com",
+        "exchange": "alt4.aspmx.l.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "2a00:1450:400b:c00::1a",
+        "domain": "sitca-ve.com",
+        "exchange": "alt2.aspmx.l.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "172.64.151.199",
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "type": "A"
+    },
+    {
+        "address": "104.18.36.57",
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "type": "A"
+    },
+    {
+        "address": "2606:4700:4400::6812:2439",
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "type": "AAAA"
+    },
+    {
+        "address": "2606:4700:4400::ac40:97c7",
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "type": "AAAA"
+    },
+    {
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "strings": "atlassian-domain-verification=VBQs5ngO/vd4sDNhBV/SVFPB1/zCoQwfOmGYgJa3N4uvVN3tw8U1RPuO1Ky8r7ce",
+        "type": "TXT"
+    },
+    {
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "strings": "stripe-verification=212c55a417698e132ffe1228f088eca3073bcb87476d812dd8f35bb54869a610",
+        "type": "TXT"
+    },
+    {
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "strings": "v=spf1 include:_spf.atlassian.net ~all",
+        "type": "TXT"
+    },
+    {
+        "domain": "sitca-ve.com",
+        "name": "sitca-ve.com",
+        "strings": "v=spf1 include:_spf.google.com ~all",
+        "type": "TXT"
+    },
+    {
+        "domain": "sitca-ve.com",
+        "name": "_dmarc.sitca-ve.com",
+        "strings": "v=DMARC1; p=quarantine; pct=5; rua=mailto:forense@sitca-ve.com",
+        "type": "TXT"
+    },
+    {
+        "address": "52.96.185.200",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "52.96.54.216",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "52.96.181.248",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "52.96.165.56",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "52.96.165.200",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "52.96.189.40",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "52.96.104.8",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "52.96.172.104",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2603:1036:302:4840::8",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2603:1036:303:3805::8",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2603:1036:302:40b4::8",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2603:1036:303:303c::8",
+        "domain": "sitca-ve.com",
+        "name": "_autodiscover._tcp.sitca-ve.com",
+        "port": "443",
+        "target": "autodiscover.justhost.com",
+        "type": "SRV"
+    }
+]

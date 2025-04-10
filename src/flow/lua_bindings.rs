@@ -101,7 +101,7 @@ impl UserData for Flow {
             let handle: TaskHandle = params.get("handle")?;
             let dir_path: String = params.get("dir_path")?;
             let filename: Option<String> = params.get("filename").unwrap_or(None);
-            
+
             let success = this.export_json(handle, dir_path, filename);
             Ok(success)
         });
@@ -111,7 +111,7 @@ impl UserData for Flow {
             let handle: TaskHandle = params.get("handle")?;
             let dir_path: String = params.get("dir_path")?;
             let filename: Option<String> = params.get("filename").unwrap_or(None);
-            
+
             let success = this.export_csv(handle, dir_path, filename);
             Ok(success)
         });
@@ -121,7 +121,7 @@ impl UserData for Flow {
             let handle: TaskHandle = params.get("handle")?;
             let dir_path: String = params.get("dir_path")?;
             let filename: Option<String> = params.get("filename").unwrap_or(None);
-            
+
             let success = this.export_raw(handle, dir_path, filename);
             Ok(success)
         });
@@ -130,6 +130,57 @@ impl UserData for Flow {
         methods.add_method("pretty", |_, this, handle: TaskHandle| {
             this.pretty(handle);
             Ok(())
+        });
+
+        // Check task status and return detailed information
+        methods.add_method("check_task_status", |lua, this, handle: TaskHandle| {
+            let table = lua.create_table()?;
+
+            if let Some(output) = this.get_output(handle) {
+                let is_error = match &output {
+                    super::task::TaskOutput::None => true,
+                    super::task::TaskOutput::Json(json) => {
+                        if let serde_json::Value::Object(obj) = json {
+                            obj.contains_key("error") || obj.contains_key("exit_code")
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                };
+
+                table.set("success", !is_error)?;
+
+                if is_error {
+                    if let super::task::TaskOutput::Json(json) = &output {
+                        if let serde_json::Value::Object(obj) = json {
+                            // Extraer información de error
+                            if let Some(serde_json::Value::String(error)) = obj.get("error") {
+                                table.set("error", error.clone())?;
+                            }
+
+                            if let Some(serde_json::Value::Number(code)) = obj.get("exit_code") {
+                                if let Some(code) = code.as_i64() {
+                                    table.set("exit_code", code)?;
+                                }
+                            }
+
+                            if let Some(serde_json::Value::String(stderr)) = obj.get("stderr") {
+                                table.set("stderr", stderr.clone())?;
+                            }
+
+                            if let Some(serde_json::Value::String(stdout)) = obj.get("stdout") {
+                                table.set("stdout", stdout.clone())?;
+                            }
+                        }
+                    }
+                }
+            } else {
+                table.set("success", false)?;
+                table.set("error", "Task not found or not executed")?;
+            }
+
+            Ok(LuaValue::Table(table))
         });
 
         // Get task output
@@ -176,8 +227,9 @@ impl UserData for Flow {
                         csv_file,
                         json_file,
                         exit_code,
+                        domain,
                         stderr,
-                        stdout
+                        stdout,
                     } => {
                         let table = lua.create_table()?;
                         let csv_path_str = csv_file.to_str().unwrap_or_default();
@@ -188,7 +240,7 @@ impl UserData for Flow {
                         table.set("exit_code", exit_code)?;
                         table.set("stderr", stderr)?;
                         table.set("stdout", stdout)?;
-
+                        table.set("domain", domain)?;
 
                         Ok(LuaValue::Table(table))
                     }
