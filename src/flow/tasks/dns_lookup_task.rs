@@ -88,8 +88,13 @@ impl DnsLookupTask {
         match output {
             Ok(output) => {
                 let exit_code = output.status.code().unwrap_or(0);
+                // Preservar los códigos de escape ANSI para mantener los colores
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                
+                // También guardar los bytes crudos como cadenas hexadecimales para preservar todo el contenido original
+                let raw_stdout = output.stdout.clone();
+                let raw_stderr = output.stderr.clone();
 
                 if output.status.success() {
                     TaskOutput::DnsLookup {
@@ -99,6 +104,8 @@ impl DnsLookupTask {
                         domain: self.domain.clone(),
                         stdout,
                         stderr,
+                        raw_stdout,
+                        raw_stderr,
                     }
                 } else {
                     // Crear un objeto JSON con la información del error

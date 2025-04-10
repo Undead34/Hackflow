@@ -1,5 +1,18 @@
 ---@diagnostic disable undefined-global
 
+-- Función para convertir una cadena hexadecimal a bytes
+local function hex_to_string(hex)
+    return (hex:gsub('..', function(cc)
+        return string.char(tonumber(cc, 16))
+    end))
+end
+
+-- Función para mostrar la salida con colores
+local function print_with_colors(hex_str)
+    local raw_str = hex_to_string(hex_str)
+    print(raw_str)
+end
+
 local function main(args)
     -- flow:create_dir("documentacion")
     flow:create_dir("reconocimiento/pasivo")
@@ -18,8 +31,6 @@ local function main(args)
 
     -- Ejecutamos el DNS lookup
     local dns_handler = flow:dns_lookup({ domain = "sitca-ve.com" })
-
-    local status = flow:execute_parallel()
 
     -- Verificar el estado detallado de la tarea
     local task_status = flow:check_task_status(dns_handler)
@@ -42,6 +53,8 @@ local function main(args)
         flow:export_csv({ handle = dns_handler, dir_path = "reconocimiento/pasivo" })
         flow:export_raw({ handle = dns_handler, dir_path = "reconocimiento/pasivo" })
     end
+
+    local status = flow:execute_parallel()
 end
 
 return { main = main }

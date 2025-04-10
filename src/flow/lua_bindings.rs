@@ -230,6 +230,8 @@ impl UserData for Flow {
                         domain,
                         stderr,
                         stdout,
+                        raw_stdout,
+                        raw_stderr,
                     } => {
                         let table = lua.create_table()?;
                         let csv_path_str = csv_file.to_str().unwrap_or_default();
@@ -241,6 +243,8 @@ impl UserData for Flow {
                         table.set("stderr", stderr)?;
                         table.set("stdout", stdout)?;
                         table.set("domain", domain)?;
+                        table.set("raw_stdout", raw_stdout)?;
+                        table.set("raw_stderr", raw_stderr)?;
 
                         Ok(LuaValue::Table(table))
                     }

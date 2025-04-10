@@ -715,8 +715,8 @@ impl Flow {
 
             match output {
                 TaskOutput::DnsLookup {
-                    stdout,
-                    stderr,
+                    raw_stdout,
+                    raw_stderr,
                     exit_code,
                     domain,
                     ..
@@ -731,14 +731,14 @@ impl Flow {
 
                     // Exportar stdout
                     let stdout_path = target_dir.join(format!("{}_stdout.txt", base_filename));
-                    if let Err(e) = fs::write(&stdout_path, stdout) {
+                    if let Err(e) = fs::write(&stdout_path, &raw_stdout) {
                         println!("Error exporting stdout: {}", e);
                         return false;
                     }
 
                     // Exportar stderr
                     let stderr_path = target_dir.join(format!("{}_stderr.txt", base_filename));
-                    if let Err(e) = fs::write(&stderr_path, stderr) {
+                    if let Err(e) = fs::write(&stderr_path, &raw_stderr) {
                         println!("Error exporting stderr: {}", e);
                         return false;
                     }

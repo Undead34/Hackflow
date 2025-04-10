@@ -39,6 +39,8 @@ pub enum TaskOutput {
         domain: String,
         stdout: String,
         stderr: String,
+        raw_stdout: Vec<u8>,
+        raw_stderr: Vec<u8>,
     },
     /// Subfinder output (domains)
     Subfinder(Vec<String>),
