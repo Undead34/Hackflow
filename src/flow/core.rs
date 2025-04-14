@@ -14,7 +14,7 @@ use super::task_executor::TaskExecutor;
 use super::tasks::dns_lookup_task::DnsLookupTask;
 use super::tasks::print_task::PrintTask;
 use super::tasks::run_command_task::RunCommandTask;
-use super::tasks::CreateDirTask;
+use super::tasks::{CreateDirTask, ExportCSVTask};
 
 /// Represents a workflow execution engine
 #[derive(Debug)]
@@ -645,56 +645,17 @@ impl Flow {
 
     /// Export task output to a CSV file
     pub fn export_csv(
-        &self,
+        &mut self,
         handle: TaskHandle,
         dir_path: String,
         filename: Option<String>,
-    ) -> bool {
-        use std::fs;
-        use std::path::Path;
+    ) -> TaskHandle {
+        let mut dependencies = HashSet::new();
+        dependencies.insert(handle);
 
-        if let Some(output) = self.get_output(handle) {
-            match output {
-                TaskOutput::DnsLookup { csv_file, .. } => {
-                    // Para DnsLookup, simplemente copiamos el archivo CSV existente
-                    let target_dir = Path::new(&dir_path);
-                    if !target_dir.exists() {
-                        if let Err(e) = fs::create_dir_all(target_dir) {
-                            println!("Error creating directory: {}", e);
-                            return false;
-                        }
-                    }
+        let task = ExportCSVTask::new(self.get_output(handle).unwrap(), dir_path, filename);
 
-                    let source_filename = csv_file.file_name().unwrap_or_default();
-                    let target_filename = if let Some(name) = filename {
-                        Path::new(&name).with_extension("csv")
-                    } else {
-                        Path::new(source_filename).to_path_buf()
-                    };
-
-                    let target_path = target_dir.join(target_filename);
-
-                    match fs::copy(&csv_file, &target_path) {
-                        Ok(_) => {
-                            println!("Exported CSV to {}", target_path.display());
-                            true
-                        }
-                        Err(e) => {
-                            println!("Error exporting CSV: {}", e);
-                            false
-                        }
-                    }
-                }
-                // Implementar otros tipos de salida según sea necesario
-                _ => {
-                    println!("Export CSV not supported for this task type");
-                    false
-                }
-            }
-        } else {
-            println!("No output available for task {}", handle);
-            false
-        }
+        self.add_task(task, Some(dependencies))
     }
 
     /// Export task output in its raw format
@@ -727,7 +688,8 @@ impl Flow {
                     let date_tag = chrono::Local::now().format("%Y%m%d_%H%M").to_string();
 
                     // Usar PathBuf para construir rutas de forma robusta
-                    let base_filename = format!("{}_{}_{}_{}", client_id, tool_name, scan_type, date_tag);
+                    let base_filename =
+                        format!("{}_{}_{}_{}", client_id, tool_name, scan_type, date_tag);
 
                     // Exportar stdout
                     let stdout_path = target_dir.join(format!("{}_stdout.txt", base_filename));

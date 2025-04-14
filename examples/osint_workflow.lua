@@ -1,18 +1,5 @@
 ---@diagnostic disable undefined-global
 
--- Función para convertir una cadena hexadecimal a bytes
-local function hex_to_string(hex)
-    return (hex:gsub('..', function(cc)
-        return string.char(tonumber(cc, 16))
-    end))
-end
-
--- Función para mostrar la salida con colores
-local function print_with_colors(hex_str)
-    local raw_str = hex_to_string(hex_str)
-    print(raw_str)
-end
-
 local function main(args)
     -- flow:create_dir("documentacion")
     flow:create_dir("reconocimiento/pasivo")

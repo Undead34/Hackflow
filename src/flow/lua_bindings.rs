@@ -107,13 +107,13 @@ impl UserData for Flow {
         });
 
         // Export CSV
-        methods.add_method("export_csv", |_, this, params: Table| {
+        methods.add_method_mut("export_csv", |_lua, this, params: Table| {
             let handle: TaskHandle = params.get("handle")?;
             let dir_path: String = params.get("dir_path")?;
             let filename: Option<String> = params.get("filename").unwrap_or(None);
 
-            let success = this.export_csv(handle, dir_path, filename);
-            Ok(success)
+            let handle = this.export_csv(handle, dir_path, filename);
+            Ok(handle)
         });
 
         // Export Raw
