@@ -222,22 +222,20 @@ impl Flow {
             .all(|node| matches!(node.status, TaskStatus::Completed)))
     }
 
-    /// Execute a single task asynchronously
-    async fn execute_task_async(
+    /// Run a single task and update its state in the task map
+    async fn run_task(
         handle: TaskHandle,
-        tasks: Arc<Mutex<HashMap<TaskHandle, TaskNode>>>,
-        completed: Arc<Mutex<HashSet<TaskHandle>>>,
-    ) -> bool {
-        // Verificar si la tarea existe
+        tasks: &Arc<Mutex<HashMap<TaskHandle, TaskNode>>>,
+    ) -> Result<TaskOutput, String> {
+        // Verify the task exists
         {
             let tasks_guard = tasks.lock().await;
             if !tasks_guard.contains_key(&handle) {
-                println!("Task not found: {}", handle);
-                return false;
+                return Err(format!("Task not found: {}", handle));
             }
         }
 
-        // Actualizar el estado a Running
+        // Update status to Running
         {
             let mut tasks_guard = tasks.lock().await;
             if let Some(task) = tasks_guard.get_mut(&handle) {
@@ -245,7 +243,7 @@ impl Flow {
             }
         }
 
-        // Obtener el input_handle y procesar la entrada si es necesario
+        // Obtain input output if available
         let input_output = {
             let tasks_guard = tasks.lock().await;
             if let Some(task) = tasks_guard.get(&handle) {
@@ -263,7 +261,7 @@ impl Flow {
             }
         };
 
-        // Procesar la entrada si está disponible
+        // Process input if available
         if let Some(input) = &input_output {
             let mut tasks_guard = tasks.lock().await;
             if let Some(task) = tasks_guard.get_mut(&handle) {
@@ -271,32 +269,46 @@ impl Flow {
             }
         }
 
-        // Ejecutar la tarea
+        // Execute the task
         let result = {
             let tasks_guard = tasks.lock().await;
             if let Some(task) = tasks_guard.get(&handle) {
                 task.executor.execute().await
             } else {
-                return false;
+                return Err(format!("Task not found: {}", handle));
             }
         };
 
-        // Actualizar la tarea con el resultado
+        // Update the task with the result
         {
             let mut tasks_guard = tasks.lock().await;
             if let Some(task) = tasks_guard.get_mut(&handle) {
                 task.status = TaskStatus::Completed;
-                task.output = result;
+                task.output = result.clone();
             }
         }
 
-        // Mark as completed
-        {
+        Ok(result)
+    }
+
+    /// Execute a single task asynchronously
+    async fn execute_task_async(
+        handle: TaskHandle,
+        tasks: Arc<Mutex<HashMap<TaskHandle, TaskNode>>>,
+        completed: Arc<Mutex<HashSet<TaskHandle>>>,
+    ) -> bool {
+        let result = Self::run_task(handle, &tasks).await;
+
+        if result.is_ok() {
             let mut completed_guard = completed.lock().await;
             completed_guard.insert(handle);
+            true
+        } else {
+            if let Err(err) = result {
+                println!("{}", err);
+            }
+            false
         }
-
-        true
     }
 
     /// Execute all tasks in the workflow in parallel using tokio
@@ -486,58 +498,22 @@ impl Flow {
 
     /// Execute a single task
     fn execute_task(&mut self, handle: TaskHandle) -> bool {
-        // Verificar si la tarea existe
-        if !self.tasks.contains_key(&handle) {
-            println!("Task not found: {}", handle);
-            return false;
-        }
+        // Wrap tasks in Arc<Mutex> to reuse async run_task logic
+        let tasks_arc = Arc::new(Mutex::new(std::mem::take(&mut self.tasks)));
 
-        // Actualizar el estado a Running
-        if let Some(task) = self.tasks.get_mut(&handle) {
-            task.status = TaskStatus::Running;
-        }
-
-        // Obtener el input_handle y procesar la entrada si es necesario
-        let input_output = {
-            if let Some(task) = self.tasks.get(&handle) {
-                if let Some(input_handle) = task.executor.input_handle() {
-                    if let Some(input_task) = self.tasks.get(&input_handle) {
-                        Some(input_task.output.clone())
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        };
-
-        // Procesar la entrada si está disponible
-        if let Some(input) = &input_output {
-            if let Some(task) = self.tasks.get_mut(&handle) {
-                let _ = task.executor.process_input(input);
-            }
-        }
-
-        // Ejecutar la tarea usando un runtime de tokio
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        let result = runtime.block_on(async {
-            if let Some(task) = self.tasks.get(&handle) {
-                task.executor.execute().await
-            } else {
-                return TaskOutput::None;
+        let result = runtime.block_on(Self::run_task(handle, &tasks_arc));
+
+        // Restore tasks
+        self.tasks = Arc::try_unwrap(tasks_arc).unwrap().into_inner();
+
+        match result {
+            Ok(_) => true,
+            Err(err) => {
+                println!("{}", err);
+                false
             }
-        });
-
-        // Actualizar la tarea con el resultado
-        if let Some(task) = self.tasks.get_mut(&handle) {
-            task.status = TaskStatus::Completed;
-            task.output = result;
         }
-
-        true
     }
 }
 
