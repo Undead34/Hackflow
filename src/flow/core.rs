@@ -29,6 +29,108 @@ pub struct Flow {
     node_indices: HashMap<TaskHandle, NodeIndex>,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::sync::{Arc, Mutex};
+
+    #[derive(Clone)]
+    struct SourceTask;
+
+    impl SourceTask {
+        async fn execute_impl(&self) -> TaskOutput {
+            TaskOutput::String("hello".into())
+        }
+    }
+
+    impl TaskExecutor for SourceTask {
+        fn name(&self) -> &str {
+            "source"
+        }
+
+        fn execute<'a>(&'a self) -> Pin<Box<dyn Future<Output = TaskOutput> + Send + 'a>> {
+            Box::pin(self.execute_impl())
+        }
+
+        fn input_handle(&self) -> Option<TaskHandle> {
+            None
+        }
+
+        fn clone_box(&self) -> Box<dyn TaskExecutor + Send + Sync> {
+            Box::new(self.clone())
+        }
+    }
+
+    #[derive(Clone)]
+    struct SinkTask {
+        received: Arc<Mutex<Option<TaskOutput>>>,
+        input_handle: Option<TaskHandle>,
+    }
+
+    impl SinkTask {
+        fn new() -> Self {
+            Self {
+                received: Arc::new(Mutex::new(None)),
+                input_handle: None,
+            }
+        }
+
+        async fn execute_impl(&self) -> TaskOutput {
+            TaskOutput::None
+        }
+    }
+
+    impl TaskExecutor for SinkTask {
+        fn name(&self) -> &str {
+            "sink"
+        }
+
+        fn execute<'a>(&'a self) -> Pin<Box<dyn Future<Output = TaskOutput> + Send + 'a>> {
+            Box::pin(self.execute_impl())
+        }
+
+        fn input_handle(&self) -> Option<TaskHandle> {
+            self.input_handle
+        }
+
+        fn process_input(&mut self, input: &TaskOutput) -> Option<TaskOutput> {
+            *self.received.lock().unwrap() = Some(input.clone());
+            None
+        }
+
+        fn clone_box(&self) -> Box<dyn TaskExecutor + Send + Sync> {
+            Box::new(self.clone())
+        }
+    }
+
+    #[test]
+    fn pipes_output_between_tasks() {
+        let mut flow = Flow::new();
+
+        // Add source task
+        let source_handle = flow.add_task(SourceTask, None);
+
+        // Prepare sink task that depends on source
+        let mut sink = SinkTask::new();
+        sink.input_handle = Some(source_handle);
+        let mut deps = HashSet::new();
+        deps.insert(source_handle);
+        flow.add_task(sink.clone(), Some(deps));
+
+        // Execute workflow
+        assert!(flow.execute());
+
+        // Verify sink received source output via process_input
+        let received = sink.received.lock().unwrap().clone();
+        match received {
+            Some(TaskOutput::String(s)) => assert_eq!(s, "hello"),
+            other => panic!("unexpected input: {:?}", other),
+        }
+    }
+}
+
 impl Flow {
     pub fn new() -> Self {
         Self {
@@ -449,10 +551,11 @@ impl Flow {
         input_handle: Option<TaskHandle>,
     ) -> TaskHandle {
         let args = args.unwrap_or_default();
-        let task = RunCommandTask::new(command, args);
+        let mut task = RunCommandTask::new(command, args);
 
         let mut dependencies = HashSet::new();
         if let Some(handle) = input_handle {
+            task.input_handle = Some(handle);
             dependencies.insert(handle);
         }
 
@@ -473,10 +576,11 @@ impl Flow {
         replace_args: Option<bool>,
         input_handle: Option<TaskHandle>,
     ) -> TaskHandle {
-        let task = DnsLookupTask::new(domain, args, replace_args);
+        let mut task = DnsLookupTask::new(domain, args, replace_args);
 
         let mut dependencies = HashSet::new();
         if let Some(handle) = input_handle {
+            task.input_handle = Some(handle);
             dependencies.insert(handle);
         }
 
@@ -491,15 +595,15 @@ impl Flow {
         input_handle: Option<TaskHandle>,
     ) -> TaskHandle {
         // Implementar NmapTask cuando sea necesario
-        let mut dependencies = HashSet::new();
-        if let Some(handle) = input_handle {
-            dependencies.insert(handle);
-        }
-
-        // Por ahora, usamos RunCommandTask como un placeholder
         let command = format!("nmap {}", targets.join(" "));
         let args = options.unwrap_or_default();
-        let task = RunCommandTask::new(command, args);
+        let mut task = RunCommandTask::new(command, args);
+
+        let mut dependencies = HashSet::new();
+        if let Some(handle) = input_handle {
+            task.input_handle = Some(handle);
+            dependencies.insert(handle);
+        }
 
         self.add_task(task, Some(dependencies))
     }
@@ -512,15 +616,15 @@ impl Flow {
         input_handle: Option<TaskHandle>,
     ) -> TaskHandle {
         // Implementar SubfinderTask cuando sea necesario
-        let mut dependencies = HashSet::new();
-        if let Some(handle) = input_handle {
-            dependencies.insert(handle);
-        }
-
-        // Por ahora, usamos RunCommandTask como un placeholder
         let command = format!("subfinder -d {}", domain);
         let args = options.unwrap_or_default();
-        let task = RunCommandTask::new(command, args);
+        let mut task = RunCommandTask::new(command, args);
+
+        let mut dependencies = HashSet::new();
+        if let Some(handle) = input_handle {
+            task.input_handle = Some(handle);
+            dependencies.insert(handle);
+        }
 
         self.add_task(task, Some(dependencies))
     }
@@ -528,15 +632,15 @@ impl Flow {
     /// Add a Wappalyzer task to the workflow
     pub fn run_wappalyzer(&mut self, url: String, input_handle: Option<TaskHandle>) -> TaskHandle {
         // Implementar WappalyzerTask cuando sea necesario
-        let mut dependencies = HashSet::new();
-        if let Some(handle) = input_handle {
-            dependencies.insert(handle);
-        }
-
-        // Por ahora, usamos RunCommandTask como un placeholder
         let command = format!("wappalyzer {}", url);
         let args = Vec::new();
-        let task = RunCommandTask::new(command, args);
+        let mut task = RunCommandTask::new(command, args);
+
+        let mut dependencies = HashSet::new();
+        if let Some(handle) = input_handle {
+            task.input_handle = Some(handle);
+            dependencies.insert(handle);
+        }
 
         self.add_task(task, Some(dependencies))
     }

@@ -91,7 +91,7 @@ impl DnsLookupTask {
                 // Preservar los códigos de escape ANSI para mantener los colores
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                
+
                 // También guardar los bytes crudos como cadenas hexadecimales para preservar todo el contenido original
                 let raw_stdout = output.stdout.clone();
                 let raw_stderr = output.stderr.clone();
@@ -144,9 +144,9 @@ impl DnsLookupTask {
         }
     }
 
-    fn process_input(&self, input: &TaskOutput) -> Option<TaskOutput> {
-        match input {
-            _ => None,
-        }
+    fn process_input(&mut self, _input: &TaskOutput) -> Option<TaskOutput> {
+        // DnsLookupTask actualmente no utiliza la salida de otras tareas,
+        // pero mantenemos el método para compatibilidad futura.
+        None
     }
 }
