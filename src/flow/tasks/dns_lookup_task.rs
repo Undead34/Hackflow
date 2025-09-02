@@ -6,6 +6,7 @@ use std::env::temp_dir;
 use std::path::PathBuf;
 use wslpath_rs::{windows_to_wsl, wsl_to_windows};
 
+use crate::config::CLI_PATHS;
 use tokio::process::Command;
 
 define_task!(DnsLookup, DnsLookupTask, domain: String, args: Option<Vec<String>>, replace_args: Option<bool>);
@@ -44,10 +45,14 @@ impl DnsLookupTask {
         let mut command;
 
         if cfg!(target_os = "windows") {
-            command = Command::new("wsl");
-            command.args(["--distribution", "kali-linux", "--", "dnsrecon"]);
+            command = Command::new(&CLI_PATHS.wsl);
+            command
+                .arg("--distribution")
+                .arg("kali-linux")
+                .arg("--")
+                .arg(&CLI_PATHS.dnsrecon);
         } else {
-            command = Command::new("dnsrecon");
+            command = Command::new(&CLI_PATHS.dnsrecon);
         }
 
         if let Some(args) = self.args.clone() {
