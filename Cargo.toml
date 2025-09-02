@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.97"
 chrono = "0.4.40"
-clap = "4.5.35"
+clap = { version = "4.5.35", features = ["derive"] }
 hex = "0.4.3"
 mlua = { version = "0.10.3", features = ["anyhow", "lua54", "vendored"] }
 petgraph = "0.6.4"
