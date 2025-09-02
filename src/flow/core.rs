@@ -120,7 +120,7 @@ mod tests {
         flow.add_task(sink.clone(), Some(deps));
 
         // Execute workflow
-        assert!(flow.execute());
+        assert!(flow.execute().unwrap());
 
         // Verify sink received source output via process_input
         let received = sink.received.lock().unwrap().clone();
@@ -182,45 +182,44 @@ impl Flow {
         handle
     }
 
-    /// Execute all tasks in the workflow sequentially
-    /// This method blocks until all tasks are completed
-    pub fn execute(&mut self) -> bool {
+    /// Execute all tasks in the workflow sequentially following topological order
+    /// Returns an error if a cycle is detected in the DAG
+    pub fn execute(&mut self) -> Result<bool, String> {
         if self.tasks.is_empty() {
-            return true;
+            return Ok(true);
         }
 
-        // Get the next available handle to determine the number of tasks added so far
-        let max_handle = self.next_handle - 1;
+        // Perform a topological sort to determine execution order
+        let order = match petgraph::algo::toposort(&self.dag, None) {
+            Ok(order) => order,
+            Err(cycle) => {
+                let handle = self.dag[cycle.node_id()];
+                return Err(format!("Cycle detected in DAG involving task {}", handle));
+            }
+        };
 
-        // Execute tasks in the order they were added (by handle value)
-        // Handles are assigned sequentially starting from 1
-        let mut handles: Vec<TaskHandle> = (1..=max_handle)
-            .filter(|handle| {
-                self.tasks.contains_key(handle)
-                    && !matches!(
-                        self.tasks.get(handle).unwrap().status,
-                        TaskStatus::Completed
-                    )
-            })
-            .collect();
+        for node_idx in order {
+            let handle = self.dag[node_idx];
 
-        if handles.is_empty() {
-            return true; // All tasks are already completed
-        }
+            // Skip tasks that are already completed or were removed
+            if let Some(task) = self.tasks.get(&handle) {
+                if matches!(task.status, TaskStatus::Completed) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
 
-        // Sort by handle to ensure sequential execution in the order tasks were added
-        handles.sort();
-
-        for handle in handles {
             if !self.execute_task(handle) {
-                return false;
+                return Ok(false);
             }
         }
 
         // Verify all tasks were executed
-        self.tasks
+        Ok(self
+            .tasks
             .values()
-            .all(|node| matches!(node.status, TaskStatus::Completed))
+            .all(|node| matches!(node.status, TaskStatus::Completed)))
     }
 
     /// Execute a single task asynchronously
