@@ -80,7 +80,7 @@ impl UserData for Flow {
 
         // Sequential execution
         methods.add_method_mut("execute", |_, this, ()| {
-            let success = this.execute();
+            let success = this.execute().map_err(mlua::Error::external)?;
             Ok(success)
         });
 
