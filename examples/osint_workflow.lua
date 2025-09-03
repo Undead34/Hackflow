@@ -1,6 +1,5 @@
----@diagnostic disable undefined-global
-
 local function main(args)
+    local flow = Flow.new()
     -- flow:create_dir("documentacion")
     flow:create_dir("reconocimiento/pasivo")
     -- flow:create_dir("reconocimiento/activo")

@@ -283,9 +283,17 @@ impl UserData for Flow {
 
 /// Register the Flow module in Lua
 pub fn register_module(lua: &Lua) -> Result<()> {
-    let flow = Flow::new();
-    let flow = lua.create_userdata(flow)?;
-    lua.globals().set("flow", flow)?;
+    // Create Flow.new() constructor
+    let new_fn = lua.create_function(|lua, _: Option<String>| {
+        let flow = Flow::new();
+        let userdata = lua.create_userdata(flow)?;
+        Ok(userdata)
+    })?;
+
+    // Module table with constructor
+    let flow_tbl = lua.create_table()?;
+    flow_tbl.set("new", new_fn)?;
+    lua.globals().set("Flow", flow_tbl)?;
 
     Ok(())
 }
