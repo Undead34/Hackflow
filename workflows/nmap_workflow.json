@@ -1,0 +1,61 @@
+{
+  "name": "Nmap automated scan",
+  "description": "Discovery scan followed by detailed scan on open ports",
+  "tasks": [
+    {
+      "id": "log_start",
+      "action": { "type": "print", "message": "Starting discovery for {{targets}}" }
+    },
+    {
+      "id": "prepare_dir",
+      "depends_on": ["log_start"],
+      "action": { "type": "create_dir", "path": "escaneo/automatizado" }
+    },
+    {
+      "id": "discovery",
+      "depends_on": ["prepare_dir"],
+      "action": {
+        "type": "command",
+        "program": "nmap",
+        "args": [
+          "-vvv",
+          "-p-",
+          "-sS",
+          "--open",
+          "-T4",
+          "--min-rate",
+          "5000",
+          "-n",
+          "-oG",
+          "-",
+          "{{targets}}"
+        ]
+      },
+      "post_hook": "local ports = {}\\nfor line in raw:gmatch(\"[^\\r\\n]+\") do\\n  for port,status,proto in line:gmatch(\"(%d+)/(%w+)/(%w+)\") do\\n    if status == \"open\" then table.insert(ports, port) end\\n  end\\nend\\ntable.sort(ports, function(a,b) return tonumber(a) < tonumber(b) end)\\nreturn table.concat(ports, \",\")"
+    },
+    {
+      "id": "detailed",
+      "depends_on": ["discovery"],
+      "action": {
+        "type": "command",
+        "program": "nmap",
+        "args": [
+          "-vvv",
+          "-p",
+          "",
+          "-sS",
+          "-sV",
+          "-sC",
+          "-T4",
+          "-n",
+          "-oN",
+          "escaneo/automatizado/nmap_detailed.nmap",
+          "-oG",
+          "escaneo/automatizado/nmap_detailed.grep",
+          "{{targets}}"
+        ]
+      },
+      "pipes": [{ "kind": "arg_from", "task": "discovery", "position": 2 }]
+    }
+  ]
+}

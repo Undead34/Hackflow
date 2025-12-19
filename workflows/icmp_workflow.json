@@ -1,0 +1,17 @@
+{
+  "name": "ICMP host discovery",
+  "description": "Runs an ICMP-based host discovery scan with Nmap",
+  "tasks": [
+    { "id": "log_start", "action": { "type": "print", "message": "Starting ICMP discovery for {{targets}}" } },
+    { "id": "prepare_dir", "depends_on": ["log_start"], "action": { "type": "create_dir", "path": "escaneo/icmp_discovery" } },
+    {
+      "id": "icmp_discovery",
+      "depends_on": ["prepare_dir"],
+      "action": {
+        "type": "command",
+        "program": "nmap",
+        "args": ["--open", "-sn", "-T4", "-n", "-oG", "-", "{{targets}}"]
+      }
+    }
+  ]
+}
